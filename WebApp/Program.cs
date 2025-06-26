@@ -7,6 +7,19 @@ builder.Services.AddHttpClient("ShirtsApi", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 }
 );
+builder.Services.AddHttpClient("AuthorityApi", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7065/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+}
+);
+builder.Services.AddSession(options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.IdleTimeout = TimeSpan.FromHours(5);
+        options.Cookie.IsEssential = true;
+    });
+builder.Services.AddHttpContextAccessor();
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddTransient<IWebApiExecuter,WebApiExecuter>();
@@ -26,7 +39,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthorization();
-
+app.UseSession();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

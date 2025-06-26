@@ -112,6 +112,14 @@ namespace WebApp.Controllers
                     ModelState.AddModelError(error.Key, string.Join("; ", error.Value));
                 }
             }
+            else if(ex.errorResponse!=null)
+            {
+                ModelState.AddModelError("Error", ex.errorResponse.Title);
+            }
+            else
+            {
+                ModelState.AddModelError("Error", ex.Message);
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using WebAPIDemo.Authority;
 using WebAPIDemo.Models;
 
 namespace WebAPIDemo.Data
@@ -10,6 +11,8 @@ namespace WebAPIDemo.Data
             
         }
         public DbSet<Shirt> Shirt { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<Application> Applications { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

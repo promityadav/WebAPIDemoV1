@@ -1,18 +1,21 @@
 ﻿using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Reflection.Metadata;
+using System.Security.Claims;
+using WebAPIDemo.Data;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace WebAPIDemo.Authority
 {
     public static class Authenticator
     {
+       
         public static bool Authenticate(string clientid, string secret)
         {
-            var app =AppRepository.GetApplicationByClientId(clientid);
+            var app = AppRepository.GetApplicationByClientId(clientid);
             if (app == null) return false;
-                
-            return (app.ClientId==clientid && app.Secret==secret);
+
+            return (app.ClientId == clientid && app.Secret == secret);
         }
         public static string CreateToken(string clientId, DateTime expireAt, string strSecretKey)
         {
@@ -24,9 +27,19 @@ namespace WebAPIDemo.Authority
             var claimsDictionary = new Dictionary<string, object>
             {
                 {"AppName",app?.ApplicationName??string.Empty },
-                {"Read",(app?.Scopes??string.Empty).Contains("read")?"true":"false" },
-                {"Write",(app?.Scopes??string.Empty).Contains("write")?"true":"false" },
+                // {"Read",(app?.Scopes??string.Empty).Contains("read")?"true":"false" },
+                //{"Write",(app?.Scopes??string.Empty).Contains("write")?"true":"false" },
             };
+            var scopes = app?.Scopes?.Split(',') ?? Array.Empty<string>();
+            if (scopes.Length > 0)
+            {
+                foreach (var scope in scopes)
+                {
+                    claimsDictionary.Add(scope.Trim().ToLower(), "true");
+
+                }
+            }
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 SigningCredentials = signingCredentials,
@@ -39,14 +52,14 @@ namespace WebAPIDemo.Authority
             return tokenHandler.CreateToken(tokenDescriptor);
         }
 
-        public static async Task<bool> verifyTokenAsync(string tokenString, string securityKey)
+        public static async Task<IEnumerable<Claim>?> verifyTokenAsync(string tokenString, string securityKey)
         {
             if (string.IsNullOrWhiteSpace(tokenString) || string.IsNullOrWhiteSpace(securityKey))
             {
-                return false;
+                return null;
             }
             var keyBytes = System.Text.Encoding.UTF8.GetBytes(securityKey);
-            var tokenHandler=new JsonWebTokenHandler();
+            var tokenHandler = new JsonWebTokenHandler();
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
@@ -59,19 +72,26 @@ namespace WebAPIDemo.Authority
             try
             {
                 var result = await tokenHandler.ValidateTokenAsync(tokenString, validationParameters);
-                return result.IsValid;
+                if (result.SecurityToken != null)
+                {
+                    var tokenObject = tokenHandler.ReadJsonWebToken(tokenString);
+                    return tokenObject.Claims ?? Enumerable.Empty<Claim>();
+                }
+                else {
+                    return null;
+                }
             }
             catch (SecurityTokenMalformedException)
             {
-                return false;
+                return null;
             }
             catch (SecurityTokenExpiredException)
             {
-                return false;
+                return null;
             }
             catch (SecurityTokenInvalidSignatureException)
             {
-                return false;
+                return null;
             }
             catch (Exception)
             {
